@@ -10,7 +10,7 @@ A lightweight deep learning project that uses YOLOv11 to train and detect panels
 ## 🖼️ Example Output
 Annotated comic panels with bounding boxes:
 
-![Example](temp_dir/annotated_0.png)
+![Example](annotated.png)
 
 ## 📁 Dataset Format
 Defined in a `comic.yaml` file:
