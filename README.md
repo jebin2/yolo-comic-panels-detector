@@ -1,14 +1,11 @@
 
 # YOLO Comic Panels Detector
 
-A lightweight deep learning project that uses YOLOv8 to detect comic or manga panels from scanned pages.
+A lightweight deep learning project that uses YOLOv11 to train and detect comic from scanned pages.
 
 ## 🚀 Features
 - Trainable on custom comic datasets
-- YOLOv8-based panel detection
-- Exportable to ONNX or TorchScript
-- Batch inference with automatic annotation
-- Easy integration for downstream tasks (e.g., OCR, captioning)
+- YOLOv11-based panel detection
 
 ## 🖼️ Example Output
 Annotated comic panels with bounding boxes:
