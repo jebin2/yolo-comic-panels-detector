@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>🖼️ Comic Panel Annotator</title>
+    <title>📸 Comic Panel Annotator</title>
     <style>
         * {
             margin: 0;
@@ -13,227 +13,360 @@
         }
 
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            min-height: 98vh;
-            color: #333;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #f8fafc;
+            min-height: 100vh;
+            color: #1a202c;
         }
 
-        .container {
-            max-height: 95vh;
-            margin: 0 auto;
-            padding: 20px;
-            background: rgba(255, 255, 255, 0.95);
-            border-radius: 20px;
-            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
-            backdrop-filter: blur(10px);
-            margin: 10px;
-        }
-
-        h1 {
-            display: none;
-            text-align: center;
-            color: #4a5568;
-            margin-bottom: 30px;
-            font-size: 2.5rem;
-            font-weight: 700;
-            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-        }
-
-        .layout {
-            display: grid;
-            grid-template-columns: 300px 1fr 300px;
-            gap: 30px;
-            min-height: 600px;
-        }
-
-        .panel {
+        /* Top Navigation Bar */
+        .top-nav {
             background: white;
-            border-radius: 15px;
-            padding: 25px;
-            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
-            border: 1px solid rgba(255, 255, 255, 0.2);
-            height: fit-content;
-        }
-
-        .panel h2 {
-            color: #2d3748;
-            margin-bottom: 20px;
-            font-size: 1.3rem;
-            font-weight: 600;
+            border-bottom: 1px solid #e2e8f0;
+            padding: 16px 24px;
             display: flex;
             align-items: center;
-            gap: 10px;
+            justify-content: space-between;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
         }
 
-        .form-group {
-            margin-bottom: 20px;
+        .logo {
+            font-size: 20px;
+            font-weight: 700;
+            color: #2d3748;
+            display: flex;
+            align-items: center;
+            gap: 8px;
         }
 
-        label {
-            display: block;
-            margin-bottom: 8px;
+        .nav-actions {
+            display: flex;
+            gap: 12px;
+            align-items: center;
+        }
+
+        /* Main Layout */
+        .main-container {
+            display: flex;
+            height: calc(100vh - 72px);
+            overflow: hidden;
+        }
+
+        /* Left Sidebar */
+        .sidebar {
+            width: 320px;
+            background: white;
+            border-right: 1px solid #e2e8f0;
+            display: flex;
+            flex-direction: column;
+            overflow-y: auto;
+        }
+
+        .sidebar-section {
+            padding: 20px;
+            border-bottom: 1px solid #f1f5f9;
+        }
+
+        .sidebar-section:last-child {
+            border-bottom: none;
+        }
+
+        .section-title {
+            font-size: 14px;
             font-weight: 600;
             color: #4a5568;
-        }
-
-        select,
-        input {
-            width: 100%;
-            padding: 12px;
-            border: 2px solid #e2e8f0;
-            border-radius: 10px;
-            font-size: 14px;
-            transition: all 0.3s ease;
-            background: white;
-        }
-
-        select:focus,
-        input:focus {
-            outline: none;
-            border-color: #667eea;
-            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
-        }
-
-        .btn {
-            width: 100%;
-            padding: 12px 20px;
-            border: none;
-            border-radius: 10px;
-            font-size: 14px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            margin-bottom: 10px;
+            margin-bottom: 12px;
             text-transform: uppercase;
             letter-spacing: 0.5px;
         }
 
-        .btn-primary {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
+        /* Canvas Area */
+        .canvas-area {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            background: #f8fafc;
+            position: relative;
         }
 
-        .btn-secondary {
-            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
-            color: white;
+        .canvas-toolbar {
+            background: white;
+            border-bottom: 1px solid #e2e8f0;
+            padding: 12px 20px;
+            display: flex;
+            align-items: center;
+            gap: 16px;
         }
 
-        .btn-danger {
-            background: linear-gradient(135deg, #ff6b6b 0%, #ee5a52 100%);
-            color: white;
+        .canvas-container {
+            flex: 1;
+            overflow: auto;
+            display: flex;
+            /* justify-content: center; */
+            align-items: flex-start;
+            padding: 20px;
+            width: fit-content;
         }
 
-        .btn-success {
-            background: linear-gradient(135deg, #4ecdc4 0%, #44a08d 100%);
-            color: white;
+        canvas {
+            border: 2px solid #e2e8f0;
+            border-radius: 8px;
+            cursor: crosshair;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            background: white;
+            width: 100%;
         }
 
-        .btn-navigation {
-            background: linear-gradient(135deg, #ffd89b 0%, #19547b 100%);
-            color: white;
+        canvas:hover {
+            border-color: #4299e1;
         }
 
-        .btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+        .canvas-placeholder {
+            text-align: center;
+            padding: 60px 40px;
+            color: #a0aec0;
+            background: white;
+            border-radius: 12px;
+            border: 2px dashed #e2e8f0;
         }
 
-        .btn:active {
-            transform: translateY(0);
+        /* Form Elements */
+        /* .form-field {
+            margin-bottom: 16px;
+        } */
+
+        .form-label {
+            display: block;
+            font-size: 13px;
+            font-weight: 500;
+            color: #4a5568;
+            margin-bottom: 6px;
+        }
+
+        .form-select, .form-input {
+            width: 100%;
+            padding: 10px 12px;
+            border: 1px solid #d1d5db;
+            border-radius: 6px;
+            font-size: 14px;
+            background: white;
+            transition: all 0.2s;
+        }
+
+        .form-select:focus, .form-input:focus {
+            outline: none;
+            border-color: #4299e1;
+            box-shadow: 0 0 0 3px rgba(66, 153, 225, 0.1);
+        }
+
+        /* Buttons */
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 8px 16px;
+            border: none;
+            border-radius: 6px;
+            font-size: 13px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+            text-decoration: none;
+            justify-content: center;
         }
 
         .btn:disabled {
             opacity: 0.5;
             cursor: not-allowed;
-            transform: none;
         }
 
-        .canvas-container {
+        .btn-primary {
+            background: #4299e1;
+            color: white;
+        }
+
+        .btn-primary:hover:not(:disabled) {
+            background: #3182ce;
+        }
+
+        .btn-secondary {
+            background: #718096;
+            color: white;
+        }
+
+        .btn-secondary:hover:not(:disabled) {
+            background: #4a5568;
+        }
+
+        .btn-success {
+            background: #48bb78;
+            color: white;
+        }
+
+        .btn-success:hover:not(:disabled) {
+            background: #38a169;
+        }
+
+        .btn-danger {
+            background: #f56565;
+            color: white;
+        }
+
+        .btn-danger:hover:not(:disabled) {
+            background: #e53e3e;
+        }
+
+        .btn-ghost {
+            background: transparent;
+            color: #4a5568;
+            border: 1px solid #e2e8f0;
+        }
+
+        .btn-ghost:hover:not(:disabled) {
+            background: #f7fafc;
+            border-color: #cbd5e0;
+        }
+
+        .btn-sm {
+            padding: 6px 12px;
+            font-size: 12px;
+        }
+
+        .btn-block {
             width: 100%;
-            height: 92vh;
-            overflow: auto;
+        }
+
+        /* Navigation Controls */
+        .image-nav {
             display: flex;
-            justify-content: center;
-            background-color: #f8fafc;
-            border-radius: 15px;
-        }
-
-        canvas {
-            display: block;
-            border: 10px solid #000fff;
+            align-items: center;
+            gap: 12px;
+            background: #f7fafc;
+            padding: 12px;
             border-radius: 8px;
-            margin: 20px;
-            cursor: crosshair;
         }
 
-        canvas:hover {
-            border-color: #667eea;
+        .nav-counter {
+            font-size: 13px;
+            font-weight: 500;
+            color: #4a5568;
+            min-width: 80px;
+            text-align: center;
+            word-break: break-word;
         }
 
-        canvas.dragging {
-            cursor: move;
-        }
-
-        canvas.resizing {
-            cursor: nwse-resize;
-        }
-
-        .info-card {
+        /* Progress Indicator */
+        .progress-section {
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: white;
             padding: 20px;
-            border-radius: 10px;
-            margin-bottom: 20px;
-            text-align: center;
+            border-radius: 8px;
+            margin-bottom: 16px;
         }
 
-        .metric {
+        .progress-stat {
             display: flex;
             justify-content: space-between;
-            margin-bottom: 10px;
-            padding: 10px;
-            background: rgba(255, 255, 255, 0.1);
-            border-radius: 8px;
+            margin-bottom: 8px;
+            font-size: 14px;
         }
 
         .progress-bar {
             width: 100%;
-            height: 10px;
-            background: rgba(255, 255, 255, 0.2);
-            border-radius: 5px;
+            height: 6px;
+            background: rgba(255, 255, 255, 0.3);
+            border-radius: 3px;
             overflow: hidden;
-            margin-top: 10px;
+            margin-top: 12px;
         }
 
         .progress-fill {
             height: 100%;
-            background: linear-gradient(90deg, #4ecdc4, #44a08d);
+            background: #48bb78;
             transition: width 0.3s ease;
         }
 
-        .instructions {
+        /* Info Cards */
+        .info-card {
             background: #f7fafc;
-            padding: 20px;
-            border-radius: 10px;
-            margin-bottom: 20px;
-            border-left: 4px solid #667eea;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            padding: 16px;
         }
 
-        .instructions ol {
-            padding-left: 20px;
+        .info-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 0;
+            border-bottom: 1px solid #e2e8f0;
         }
 
-        .instructions li {
-            margin-bottom: 8px;
+        .info-row:last-child {
+            border-bottom: none;
+        }
+
+        .info-label {
+            font-size: 13px;
+            color: #4a5568;
+            font-weight: 500;
+        }
+
+        .info-value {
+            font-size: 13px;
+            color: #1a202c;
+            font-weight: 600;
+        }
+
+        /* File Upload */
+        .file-upload {
+            position: relative;
+            overflow: hidden;
+        }
+
+        .file-upload input[type=file] {
+            position: absolute;
+            opacity: 0;
+            left: -9999px;
+        }
+
+        .file-upload-label {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            padding: 32px 20px;
+            border: 2px dashed #cbd5e0;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
             color: #4a5568;
         }
 
+        .file-upload-label:hover {
+            border-color: #4299e1;
+            background: #f7fafc;
+        }
+
+        /* Alerts */
+        .alerts {
+            position: fixed;
+            top: 80px;
+            right: 20px;
+            z-index: 1000;
+        }
+
         .alert {
-            padding: 15px;
-            border-radius: 10px;
-            margin-bottom: 15px;
+            padding: 12px 16px;
+            border-radius: 6px;
+            margin-bottom: 8px;
+            font-size: 14px;
             font-weight: 500;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            animation: slideIn 0.3s ease;
         }
 
         .alert-success {
@@ -254,223 +387,211 @@
             border: 1px solid #90cdf4;
         }
 
-        .loading {
-            display: inline-block;
-            width: 20px;
-            height: 20px;
-            border: 3px solid #f3f3f3;
-            border-top: 3px solid #667eea;
-            border-radius: 50%;
-            animation: spin 1s linear infinite;
-        }
-
-        @keyframes spin {
-            0% {
-                transform: rotate(0deg);
+        @keyframes slideIn {
+            from {
+                transform: translateX(100%);
+                opacity: 0;
             }
-
-            100% {
-                transform: rotate(360deg);
+            to {
+                transform: translateX(0);
+                opacity: 1;
             }
         }
 
-        .file-input {
-            position: relative;
-            overflow: hidden;
-            display: inline-block;
-            width: 100%;
-        }
-
-        .file-input input[type=file] {
-            position: absolute;
-            left: -9999px;
-        }
-
-        .file-input label {
-            display: block;
-            padding: 12px 20px;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            border-radius: 10px;
-            text-align: center;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            font-weight: 600;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-        }
-
-        .file-input label:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
-        }
-
-        .navigation-section {
-            margin-bottom: 20px;
-        }
-
-        .nav-buttons {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 10px;
-        }
-
-        .current-image-display {
-            text-align: center;
-            padding: 10px;
-            background: rgba(102, 126, 234, 0.1);
+        /* Quick Help */
+        .help-section {
+            background: #fffbf0;
+            border: 1px solid #fbd38d;
             border-radius: 8px;
-            margin-bottom: 10px;
-            color: #4a5568;
-            font-weight: 600;
+            padding: 16px;
         }
 
-        @media (max-width: 1200px) {
-            .layout {
-                grid-template-columns: 1fr;
-                gap: 20px;
+        .help-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 8px;
+            font-size: 12px;
+            color: #744210;
+        }
+
+        .help-item:last-child {
+            margin-bottom: 0;
+        }
+
+        .kbd {
+            background: #2d3748;
+            color: white;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-family: monospace;
+            font-size: 11px;
+        }
+
+        /* Responsive */
+        @media (max-width: 1024px) {
+            .sidebar {
+                width: 280px;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .main-container {
+                flex-direction: column;
+            }
+            
+            .sidebar {
+                width: 100%;
+                height: auto;
+                max-height: 300px;
+            }
+            
+            .canvas-area {
+                height: calc(100vh - 372px);
             }
         }
     </style>
 </head>
 
 <body>
-    <div class="container">
-        <h1>🖼️ Comic Panel Annotator</h1>
+    <!-- Top Navigation -->
+    <div class="top-nav">
+        <div class="logo">
+            📸 Comic Panel Annotator
+        </div>
+        <div class="nav-actions">
+            <button class="btn btn-success btn-sm" id="saveBtn">
+                💾 Save
+            </button>
+            <button class="btn btn-secondary btn-sm" id="undoBtn">
+                ↩️ Undo
+            </button>
+            <button class="btn btn-danger btn-sm" id="clearBtn">
+                🗑️ Clear All
+            </button>
+        </div>
+    </div>
 
-        <div class="layout">
-            <!-- Left Panel - Controls -->
-            <div class="panel">
-                <h2>⚙️ Controls</h2>
+    <div class="main-container">
+        <!-- Left Sidebar -->
+        <div class="sidebar">
+            <!-- Image Selection -->
+            <div class="sidebar-section">
+                <div class="section-title">Image Selection</div>
+                
+                <div class="image-nav">
+                    <button class="btn btn-ghost btn-sm" id="prevBtn" disabled>
+                        ← Prev
+                    </button>
+                    <!-- <div class="nav-counter" id="currentImageDisplay">
+                        No image
+                    </div> -->
 
-                <div class="navigation-section">
-                    <h3 style="margin-bottom: 15px; color: #4a5568;">Navigation</h3>
-                    <div class="current-image-display" id="currentImageDisplay">
-                        No image selected
+                    <div class="form-field">
+                        <select class="form-select" id="imageSelect">
+                            <option value="">Choose an image...</option>
+                        </select>
                     </div>
-                    <div class="nav-buttons">
-                        <button class="btn btn-navigation" id="prevBtn" disabled>
-                            ⬅️ Previous
-                        </button>
-                        <button class="btn btn-navigation" id="nextBtn" disabled>
-                            ➡️ Next
-                        </button>
-                    </div>
+                    <button class="btn btn-ghost btn-sm" id="nextBtn" disabled>
+                        Next →
+                    </button>
                 </div>
 
-                <div class="form-group">
-                    <label for="imageSelect">Select an Image:</label>
-                    <select id="imageSelect">
-                        <option value="">Choose an image...</option>
-                    </select>
-                </div>
-
-                <div class="file-input">
+                <div class="file-upload">
                     <input type="file" id="uploadFile" accept="image/*">
-                    <label for="uploadFile">📤 Upload New Image</label>
-                </div>
-
-                <hr style="margin: 20px 0; border: none; border-top: 1px solid #e2e8f0;">
-
-                <h3 style="margin-bottom: 15px; color: #4a5568;">Actions</h3>
-
-                <button class="btn btn-primary" id="saveBtn">
-                    💾 Save Annotations
-                </button>
-
-                <button class="btn btn-secondary" id="undoBtn">
-                    ↩️ Undo Last Box
-                </button>
-
-                <button class="btn btn-danger" id="clearBtn">
-                    🗑️ Clear All Boxes
-                </button>
-
-                <button class="btn btn-success" id="reloadBtn">
-                    🔄 Reload from File
-                </button>
-
-                <button class="btn btn-primary" id="downloadBtn" style="display: none;">
-                    📥 Download Annotations
-                </button>
-
-                <div id="alerts"></div>
-            </div>
-
-            <!-- Middle Panel - Canvas -->
-            <div class="canvas-container">
-                <canvas id="annotationCanvas" style="display: none;"></canvas>
-                <div id="canvasPlaceholder" style="text-align: center; padding: 100px 20px; color: #a0aec0;">
-                    <h3>Select an image to start annotating</h3>
-                    <p>Choose an image from the dropdown on the left</p>
+                    <label for="uploadFile" class="file-upload-label">
+                        📤 Drop or click to upload
+                    </label>
                 </div>
             </div>
 
-            <!-- Right Panel - Info -->
-            <div class="panel">
-                <h2>📖 Info & Progress</h2>
-
-                <div class="instructions">
-                    <h3 style="margin-bottom: 10px;">Instructions:</h3>
-                    <ol>
-                        <li>Select an image from the dropdown</li>
-                        <li>Click and drag to draw rectangles around panels</li>
-                        <li>Click on existing boxes to select and drag them</li>
-                        <li>Drag corners/edges to resize boxes</li>
-                        <li>Use arrow keys to move selected box</li>
-                        <li>Use Previous/Next buttons to navigate images</li>
-                        <li>Save your annotations using the save button</li>
-                    </ol>
-
-                    <div style="margin-top: 15px;">
-                        <strong>Box Colors:</strong><br>
-                        <span style="color: #00ff00;">🟢 Green:</span> Loaded annotations<br>
-                        <span style="color: #ff0000;">🔴 Red:</span> New annotations<br>
-                        <span style="color: #0066ff;">🔵 Blue:</span> Selected box
-                    </div>
-
-                    <div style="margin-top: 15px;">
-                        <strong>Keyboard Controls:</strong><br>
-                        <span style="font-family: monospace;">←→↑↓:</span> Move selected box<br>
-                        <span style="font-family: monospace;">Shift+←→↑↓:</span> Resize selected box<br>
-                        <span style="font-family: monospace;">Delete:</span> Delete selected box<br>
-                        <span style="font-family: monospace;">Escape:</span> Deselect box
-                    </div>
-                </div>
-
-                <div class="info-card">
-                    <h3>Progress Overview</h3>
-                    <div class="metric">
-                        <span>Total Images:</span>
-                        <span id="totalImages">0</span>
-                    </div>
-                    <div class="metric">
-                        <span>Annotated:</span>
-                        <span id="annotatedImages">0</span>
+            <!-- Progress -->
+            <div class="sidebar-section">
+                <div class="progress-section">
+                    <h3 style="margin-bottom: 12px; font-size: 16px;">Progress</h3>
+                    <div class="progress-stat">
+                        <span>Annotated</span>
+                        <span><span id="annotatedImages">0</span>/<span id="totalImages">0</span></span>
                     </div>
                     <div class="progress-bar">
                         <div class="progress-fill" id="progressFill" style="width: 0%"></div>
                     </div>
                 </div>
+            </div>
 
-                <div id="currentImageInfo" style="display: none;">
-                    <h3 style="margin-bottom: 10px;">Current Image</h3>
-                    <div class="metric">
-                        <span>Boxes:</span>
-                        <span id="boxCount">0</span>
+            <!-- Current Image Info -->
+            <div class="sidebar-section" id="currentImageInfo" style="display: none;">
+                <div class="section-title">Current Image</div>
+                <div class="info-card">
+                    <div class="info-row">
+                        <span class="info-label">Boxes</span>
+                        <span class="info-value" id="boxCount">0</span>
                     </div>
-                    <div class="metric">
-                        <span>Image Size:</span>
-                        <span id="imageSize">-</span>
+                    <div class="info-row">
+                        <span class="info-label">Size</span>
+                        <span class="info-value" id="imageSize">-</span>
                     </div>
-                    <div class="metric">
-                        <span>Selected Box:</span>
-                        <span id="selectedBoxInfo">None</span>
+                    <div class="info-row">
+                        <span class="info-label">Selected</span>
+                        <span class="info-value" id="selectedBoxInfo">None</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Quick Actions -->
+            <div class="sidebar-section">
+                <div class="section-title">Actions</div>
+                <button class="btn btn-primary btn-block" id="reloadBtn">
+                    🔄 Reload Annotations
+                </button>
+                <button class="btn btn-secondary btn-block" id="downloadBtn" style="display: none; margin-top: 8px;">
+                    📥 Download
+                </button>
+            </div>
+
+            <!-- Quick Help -->
+            <div class="sidebar-section">
+                <div class="section-title">Quick Help</div>
+                <div class="help-section">
+                    <div class="help-item">
+                        <strong>Draw:</strong> Click & drag on image
+                    </div>
+                    <div class="help-item">
+                        <strong>Move:</strong> <span class="kbd">↑↓←→</span> keys
+                    </div>
+                    <div class="help-item">
+                        <strong>Resize:</strong> <span class="kbd">Shift</span> + arrows
+                    </div>
+                    <div class="help-item">
+                        <strong>Delete:</strong> <span class="kbd">Del</span> key
+                    </div>
+                    <div class="help-item">
+                        <strong>Colors:</strong> 🟢 Saved, 🔴 New, 🔵 Selected
                     </div>
                 </div>
             </div>
         </div>
+
+        <!-- Canvas Area -->
+        <div class="canvas-area">
+            <div class="canvas-toolbar">
+                <span id="file_name" style="font-size: 13px; color: #4a5568;">
+                    Click and drag to create annotation boxes • Select boxes to move or resize
+                </span>
+            </div>
+            
+            <div class="canvas-container">
+                <canvas id="annotationCanvas" style="display: none;"></canvas>
+                <div id="canvasPlaceholder" class="canvas-placeholder">
+                    <h3 style="margin-bottom: 8px;">Select an image to start annotating</h3>
+                    <p>Choose from the dropdown or upload a new image</p>
+                </div>
+            </div>
+        </div>
     </div>
+
+    <!-- Alerts Container -->
+    <div class="alerts" id="alerts"></div>
 
     <script>
         class ComicAnnotator {
@@ -588,13 +709,12 @@
                 prevBtn.disabled = this.currentImageIndex <= 0;
                 nextBtn.disabled = this.currentImageIndex >= this.images.length - 1;
 
-                if (this.currentImageIndex >= 0) {
-                    const currentImageName = this.images[this.currentImageIndex].name;
-                    document.getElementById('currentImageDisplay').textContent =
-                        `${this.currentImageIndex + 1}/${this.images.length}: ${currentImageName}`;
-                } else {
-                    document.getElementById('currentImageDisplay').textContent = 'No image selected';
-                }
+                // if (this.currentImageIndex >= 0) {
+                //     const currentImageName = this.images[this.currentImageIndex].name;
+                //     document.getElementById('currentImageDisplay').textContent = `${this.currentImageIndex + 1}/${this.images.length}: ${currentImageName}`;
+                // } else {
+                //     document.getElementById('currentImageDisplay').textContent = 'No image selected';
+                // }
             }
 
             navigatePrevious() {
@@ -602,6 +722,7 @@
                     this.currentImageIndex--;
                     const imageName = this.images[this.currentImageIndex].name;
                     document.getElementById('imageSelect').value = imageName;
+                    document.getElementById('file_name').innerText = imageName;
                     this.loadImage(imageName);
                 }
             }
@@ -611,6 +732,7 @@
                     this.currentImageIndex++;
                     const imageName = this.images[this.currentImageIndex].name;
                     document.getElementById('imageSelect').value = imageName;
+                    document.getElementById('file_name').innerText = imageName;
                     this.loadImage(imageName);
                 }
             }
