@@ -483,11 +483,11 @@
             async loadImage(imageName) {
                 try {
                     // Load image data
-                    const imageResponse = await fetch(`/api/image/${imageName}`);
+                    const imageResponse = await fetch(`/api/image/${encodeURIComponent(imageName)}`);
                     const imageData = await imageResponse.json();
 
                     // Load annotations
-                    const annotationsResponse = await fetch(`/api/annotations/${imageName}`);
+                    const annotationsResponse = await fetch(`/api/annotations/${encodeURIComponent(imageName)}`);
                     const annotationsData = await annotationsResponse.json();
 
                     this.currentImage = imageName;
@@ -657,7 +657,7 @@
                 if (confirm('Are you sure you want to clear all boxes and delete the annotation file?')) {
                     try {
                         // Delete annotations from server
-                        await fetch(`/api/annotations/${this.currentImage}`, {
+                        await fetch(`/api/annotations/${encodeURIComponent(this.currentImage)}`, {
                             method: 'DELETE'
                         });
 
@@ -676,7 +676,7 @@
                 if (!this.currentImage) return;
 
                 try {
-                    const response = await fetch(`/api/annotations/${this.currentImage}`);
+                    const response = await fetch(`/api/annotations/${encodeURIComponent(this.currentImage)}`);
                     const data = await response.json();
 
                     this.boxes = data.boxes || [];
@@ -692,7 +692,7 @@
                 if (!this.currentImage) return;
 
                 const link = document.createElement('a');
-                link.href = `/api/annotations/${this.currentImage}/download`;
+                link.href = `/api/annotations/${encodeURIComponent(this.currentImage)}/download`;
                 link.download = `${this.currentImage.split('.')[0]}.txt`;
                 document.body.appendChild(link);
                 link.click();

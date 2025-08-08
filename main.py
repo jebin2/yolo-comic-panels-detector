@@ -7,6 +7,7 @@ from PIL import Image
 import os
 import base64
 from io import BytesIO
+import shutil
 
 app = FastAPI(title="Comic Panel Annotator API")
 
@@ -100,6 +101,8 @@ def save_yolo_annotations(boxes: List[Box], original_size: tuple, label_path: st
                 bw = width / w
                 bh = height / h
                 f.write(f"{CLASS_ID} {xc:.6f} {yc:.6f} {bw:.6f} {bh:.6f}\n")
+
+        shutil.copy2(label_path, f"./image_labels/{os.path.basename(label_path)}")
         return True
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error saving annotations: {str(e)}")
@@ -206,3 +209,12 @@ async def upload_image(file: UploadFile = File(...)):
     with open(file_path, "wb") as f:
         f.write(await file.read())
     return {"message": f"Uploaded {file.filename} to train set"}
+
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run(
+        app,
+        host="127.0.0.1",  # Or "0.0.0.0" to allow access from other machines
+        port=8000,         # Change to any available port, e.g., 8080
+        # reload=True        # Enables auto-reload for development (like --reload in CLI)
+    )

@@ -211,3 +211,5 @@ temp_dir
 venv
 yolo*pt
 comic_yolov8n_best.pt
+images
+image_labels

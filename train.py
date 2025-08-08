@@ -10,8 +10,8 @@ def get_abs_path(relative_path):
 def get_image_paths(directory):
     return sorted(glob(os.path.join(directory, '*.[jp][pn]g')))
 
-def train_model(data_yaml_path, run_name='comic_panel_yolov8n', device=0):
-    model = YOLO("yolo11s.pt")
+def train_model(data_yaml_path, model_name='yolo11s.pt', run_name='comic_panel_yolov8n', device=0):
+    model = YOLO(model_name)
     model.train(
         data=data_yaml_path,
         imgsz=640,
