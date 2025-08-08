@@ -161,7 +161,7 @@
 
         canvas {
             display: block;
-            border: 2px solid #ccc;
+            border: 10px solid #000fff;
             border-radius: 8px;
             margin: 20px;
             cursor: crosshair;
@@ -432,6 +432,7 @@
                     <div style="margin-top: 15px;">
                         <strong>Keyboard Controls:</strong><br>
                         <span style="font-family: monospace;">←→↑↓:</span> Move selected box<br>
+                        <span style="font-family: monospace;">Shift+←→↑↓:</span> Resize selected box<br>
                         <span style="font-family: monospace;">Delete:</span> Delete selected box<br>
                         <span style="font-family: monospace;">Escape:</span> Deselect box
                     </div>
@@ -967,11 +968,35 @@
                 this.updateSelectedBoxInfo();
             }
 
+            // Modified onKeyDown method with new resize functionality
             onKeyDown(e) {
                 if (!this.currentImage || this.selectedBoxIndex < 0) return;
 
+                const resizeDistance = 5; // Fixed resize distance
                 const moveDistance = e.shiftKey ? 10 : 1;
 
+                if (e.shiftKey) {
+                    // Shift + arrow keys for resizing
+                    switch (e.key) {
+                        case 'ArrowLeft':
+                            e.preventDefault();
+                            this.resizeSelectedBox(-resizeDistance, 0);
+                            break;
+                        case 'ArrowRight':
+                            e.preventDefault();
+                            this.resizeSelectedBox(resizeDistance, 0);
+                            break;
+                        case 'ArrowUp':
+                            e.preventDefault();
+                            this.resizeSelectedBox(0, -resizeDistance);
+                            break;
+                        case 'ArrowDown':
+                            e.preventDefault();
+                            this.resizeSelectedBox(0, resizeDistance);
+                            break;
+                    }
+                } else {
+                    // Regular arrow keys for moving
                 switch (e.key) {
                     case 'ArrowLeft':
                         e.preventDefault();
@@ -993,6 +1018,11 @@
                         this.moveBox(this.selectedBoxIndex, 0, moveDistance);
                         this.drawCanvas();
                         break;
+                    }
+                }
+
+                // Other key handlers
+                switch (e.key) {
                     case 'Delete':
                     case 'Backspace':
                         e.preventDefault();
@@ -1005,6 +1035,38 @@
                         this.drawCanvas();
                         break;
                 }
+            }
+
+            // New method to resize selected box
+            resizeSelectedBox(deltaWidth, deltaHeight) {
+                if (this.selectedBoxIndex < 0) return;
+
+                const box = this.boxes[this.selectedBoxIndex];
+                
+                // Calculate new dimensions
+                const newWidth = box.width + deltaWidth;
+                const newHeight = box.height + deltaHeight;
+
+                // Only resize if the new dimensions are reasonable (minimum 10px)
+                if (newWidth >= 10) {
+                    box.width = newWidth;
+                    // Keep box within canvas bounds
+                    if (box.left + box.width > this.canvas.width) {
+                        box.left = this.canvas.width - box.width;
+                    }
+                }
+
+                if (newHeight >= 10) {
+                    box.height = newHeight;
+                    // Keep box within canvas bounds
+                    if (box.top + box.height > this.canvas.height) {
+                        box.top = this.canvas.height - box.height;
+                    }
+                }
+
+                box.saved = false;
+                this.updateSelectedBoxInfo();
+                this.drawCanvas();
             }
 
             deleteSelectedBox() {

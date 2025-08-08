@@ -34,6 +34,7 @@ class Box(BaseModel):
     stroke: str = "#00ff00"
     strokeWidth: int = 3
     fill: str = "rgba(0, 255, 0, 0.2)"
+    saved: bool = True
 
     @field_validator("left", "top", "width", "height", mode="before")
     def round_floats(cls, v):
@@ -83,7 +84,8 @@ def load_yolo_boxes(image_path: str, label_path: str):
                         "height": height,
                         "stroke": "#00ff00",
                         "strokeWidth": 3,
-                        "fill": "rgba(0, 255, 0, 0.2)"
+                        "fill": "rgba(0, 255, 0, 0.2)",
+                        "saved": True
                     })
         return boxes, (w, h)
     except Exception as e:
