@@ -53,7 +53,7 @@
             padding: 25px;
             box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
             border: 1px solid rgba(255, 255, 255, 0.2);
-            height: 96%;
+            height: fit-content;
         }
 
         .panel h2 {
@@ -129,6 +129,11 @@
             color: white;
         }
 
+        .btn-navigation {
+            background: linear-gradient(135deg, #ffd89b 0%, #19547b 100%);
+            color: white;
+        }
+
         .btn:hover {
             transform: translateY(-2px);
             box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
@@ -136,6 +141,12 @@
 
         .btn:active {
             transform: translateY(0);
+        }
+
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
         }
 
         .canvas-container {
@@ -153,10 +164,19 @@
             border: 2px solid #ccc;
             border-radius: 8px;
             margin: 20px;
+            cursor: crosshair;
         }
 
         canvas:hover {
             border-color: #667eea;
+        }
+
+        canvas.dragging {
+            cursor: move;
+        }
+
+        canvas.resizing {
+            cursor: nwse-resize;
         }
 
         .info-card {
@@ -285,6 +305,26 @@
             box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
         }
 
+        .navigation-section {
+            margin-bottom: 20px;
+        }
+
+        .nav-buttons {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+        }
+
+        .current-image-display {
+            text-align: center;
+            padding: 10px;
+            background: rgba(102, 126, 234, 0.1);
+            border-radius: 8px;
+            margin-bottom: 10px;
+            color: #4a5568;
+            font-weight: 600;
+        }
+
         @media (max-width: 1200px) {
             .layout {
                 grid-template-columns: 1fr;
@@ -302,6 +342,21 @@
             <!-- Left Panel - Controls -->
             <div class="panel">
                 <h2>⚙️ Controls</h2>
+
+                <div class="navigation-section">
+                    <h3 style="margin-bottom: 15px; color: #4a5568;">Navigation</h3>
+                    <div class="current-image-display" id="currentImageDisplay">
+                        No image selected
+                    </div>
+                    <div class="nav-buttons">
+                        <button class="btn btn-navigation" id="prevBtn" disabled>
+                            ⬅️ Previous
+                        </button>
+                        <button class="btn btn-navigation" id="nextBtn" disabled>
+                            ➡️ Next
+                        </button>
+                    </div>
+                </div>
 
                 <div class="form-group">
                     <label for="imageSelect">Select an Image:</label>
@@ -360,14 +415,25 @@
                     <ol>
                         <li>Select an image from the dropdown</li>
                         <li>Click and drag to draw rectangles around panels</li>
+                        <li>Click on existing boxes to select and drag them</li>
+                        <li>Drag corners/edges to resize boxes</li>
+                        <li>Use arrow keys to move selected box</li>
+                        <li>Use Previous/Next buttons to navigate images</li>
                         <li>Save your annotations using the save button</li>
-                        <li>Use undo or clear to correct mistakes</li>
                     </ol>
 
                     <div style="margin-top: 15px;">
                         <strong>Box Colors:</strong><br>
                         <span style="color: #00ff00;">🟢 Green:</span> Loaded annotations<br>
-                        <span style="color: #ff0000;">🔴 Red:</span> New annotations
+                        <span style="color: #ff0000;">🔴 Red:</span> New annotations<br>
+                        <span style="color: #0066ff;">🔵 Blue:</span> Selected box
+                    </div>
+
+                    <div style="margin-top: 15px;">
+                        <strong>Keyboard Controls:</strong><br>
+                        <span style="font-family: monospace;">←→↑↓:</span> Move selected box<br>
+                        <span style="font-family: monospace;">Delete:</span> Delete selected box<br>
+                        <span style="font-family: monospace;">Escape:</span> Deselect box
                     </div>
                 </div>
 
@@ -396,6 +462,10 @@
                         <span>Image Size:</span>
                         <span id="imageSize">-</span>
                     </div>
+                    <div class="metric">
+                        <span>Selected Box:</span>
+                        <span id="selectedBoxInfo">None</span>
+                    </div>
                 </div>
             </div>
         </div>
@@ -407,14 +477,28 @@
                 this.canvas = document.getElementById('annotationCanvas');
                 this.ctx = this.canvas.getContext('2d');
                 this.boxes = [];
+                this.images = [];
+                this.currentImageIndex = -1;
                 this.currentImage = null;
-                this.backgroundImage = null; // Store the loaded image
+                this.backgroundImage = null;
                 this.originalWidth = 0;
                 this.originalHeight = 0;
+
+                // Drawing state
                 this.isDrawing = false;
                 this.startX = 0;
                 this.startY = 0;
                 this.currentBox = null;
+
+                // Box editing state
+                this.selectedBoxIndex = -1;
+                this.isDragging = false;
+                this.isResizing = false;
+                this.dragStartX = 0;
+                this.dragStartY = 0;
+                this.resizeHandle = null;
+                this.lastMouseX = 0;
+                this.lastMouseY = 0;
 
                 this.init();
             }
@@ -428,9 +512,17 @@
                 // Image selection
                 document.getElementById('imageSelect').addEventListener('change', (e) => {
                     if (e.target.value) {
-                        this.loadImage(e.target.value);
+                        const index = this.images.findIndex(img => img.name === e.target.value);
+                        if (index >= 0) {
+                            this.currentImageIndex = index;
+                            this.loadImage(e.target.value);
+                        }
                     }
                 });
+
+                // Navigation buttons
+                document.getElementById('prevBtn').addEventListener('click', () => this.navigatePrevious());
+                document.getElementById('nextBtn').addEventListener('click', () => this.navigateNext());
 
                 // File upload
                 document.getElementById('uploadFile').addEventListener('change', (e) => {
@@ -447,21 +539,27 @@
                 document.getElementById('downloadBtn').addEventListener('click', () => this.downloadAnnotations());
 
                 // Canvas events
-                this.canvas.addEventListener('mousedown', (e) => this.startDrawing(e));
-                this.canvas.addEventListener('mousemove', (e) => this.draw(e));
-                this.canvas.addEventListener('mouseup', () => this.stopDrawing());
-                this.canvas.addEventListener('mouseleave', () => this.stopDrawing());
+                this.canvas.addEventListener('mousedown', (e) => this.onMouseDown(e));
+                this.canvas.addEventListener('mousemove', (e) => this.onMouseMove(e));
+                this.canvas.addEventListener('mouseup', () => this.onMouseUp());
+                this.canvas.addEventListener('mouseleave', () => this.onMouseUp());
+
+                // Keyboard events
+                document.addEventListener('keydown', (e) => this.onKeyDown(e));
+
+                // Make canvas focusable for keyboard events
+                this.canvas.tabIndex = 0;
             }
 
             async loadImages() {
                 try {
                     const response = await fetch('/api/images');
-                    const images = await response.json();
+                    this.images = await response.json();
 
                     const select = document.getElementById('imageSelect');
                     select.innerHTML = '<option value="">Choose an image...</option>';
 
-                    images.forEach(img => {
+                    this.images.forEach(img => {
                         const option = document.createElement('option');
                         option.value = img.name;
                         option.textContent = `${img.name} ${img.has_annotations ? '✓' : ''}`;
@@ -469,14 +567,50 @@
                     });
 
                     // Update progress
-                    const annotated = images.filter(img => img.has_annotations).length;
-                    document.getElementById('totalImages').textContent = images.length;
+                    const annotated = this.images.filter(img => img.has_annotations).length;
+                    document.getElementById('totalImages').textContent = this.images.length;
                     document.getElementById('annotatedImages').textContent = annotated;
-                    const progress = images.length > 0 ? (annotated / images.length) * 100 : 0;
+                    const progress = this.images.length > 0 ? (annotated / this.images.length) * 100 : 0;
                     document.getElementById('progressFill').style.width = progress + '%';
+
+                    this.updateNavigationButtons();
 
                 } catch (error) {
                     this.showAlert('Error loading images: ' + error.message, 'error');
+                }
+            }
+
+            updateNavigationButtons() {
+                const prevBtn = document.getElementById('prevBtn');
+                const nextBtn = document.getElementById('nextBtn');
+
+                prevBtn.disabled = this.currentImageIndex <= 0;
+                nextBtn.disabled = this.currentImageIndex >= this.images.length - 1;
+
+                if (this.currentImageIndex >= 0) {
+                    const currentImageName = this.images[this.currentImageIndex].name;
+                    document.getElementById('currentImageDisplay').textContent =
+                        `${this.currentImageIndex + 1}/${this.images.length}: ${currentImageName}`;
+                } else {
+                    document.getElementById('currentImageDisplay').textContent = 'No image selected';
+                }
+            }
+
+            navigatePrevious() {
+                if (this.currentImageIndex > 0) {
+                    this.currentImageIndex--;
+                    const imageName = this.images[this.currentImageIndex].name;
+                    document.getElementById('imageSelect').value = imageName;
+                    this.loadImage(imageName);
+                }
+            }
+
+            navigateNext() {
+                if (this.currentImageIndex < this.images.length - 1) {
+                    this.currentImageIndex++;
+                    const imageName = this.images[this.currentImageIndex].name;
+                    document.getElementById('imageSelect').value = imageName;
+                    this.loadImage(imageName);
                 }
             }
 
@@ -494,11 +628,12 @@
                     this.originalWidth = imageData.width;
                     this.originalHeight = imageData.height;
                     this.boxes = annotationsData.boxes || [];
+                    this.selectedBoxIndex = -1;
 
                     // Load and draw image
                     const img = new Image();
                     img.onload = () => {
-                        this.backgroundImage = img; // Store the loaded image
+                        this.backgroundImage = img;
 
                         // Set canvas size to match image
                         this.canvas.width = img.width;
@@ -515,6 +650,9 @@
                     document.getElementById('currentImageInfo').style.display = 'block';
                     document.getElementById('boxCount').textContent = this.boxes.length;
                     document.getElementById('imageSize').textContent = `${imageData.width}×${imageData.height}`;
+                    document.getElementById('selectedBoxInfo').textContent = 'None';
+
+                    this.updateNavigationButtons();
 
                 } catch (error) {
                     this.showAlert('Error loading image: ' + error.message, 'error');
@@ -530,8 +668,24 @@
                 }
 
                 // Draw existing boxes
-                this.boxes.forEach(box => {
-                    this.drawBox(box.left, box.top, box.width, box.height, '#00ff00', 'rgba(0, 255, 0, 0.2)');
+                this.boxes.forEach((box, index) => {
+                    let strokeColor = '#00ff00';
+                    let fillColor = 'rgba(0, 255, 0, 0.2)';
+
+                    if (index === this.selectedBoxIndex) {
+                        strokeColor = '#0066ff';
+                        fillColor = 'rgba(0, 102, 255, 0.3)';
+                    } else if (!box.saved) {
+                        strokeColor = '#ff0000';
+                        fillColor = 'rgba(255, 0, 0, 0.2)';
+                    }
+
+                    this.drawBox(box.left, box.top, box.width, box.height, strokeColor, fillColor);
+
+                    // Draw resize handles for selected box
+                    if (index === this.selectedBoxIndex) {
+                        this.drawResizeHandles(box);
+                    }
                 });
 
                 // Draw current box being drawn
@@ -549,26 +703,331 @@
                 this.ctx.strokeRect(x, y, width, height);
             }
 
-            startDrawing(e) {
+            drawResizeHandles(box) {
+                const handleSize = 10;
+                const handles = [
+                    { x: box.left - handleSize / 2, y: box.top - handleSize / 2, cursor: 'nw-resize' },
+                    { x: box.left + box.width - handleSize / 2, y: box.top - handleSize / 2, cursor: 'ne-resize' },
+                    { x: box.left - handleSize / 2, y: box.top + box.height - handleSize / 2, cursor: 'sw-resize' },
+                    { x: box.left + box.width - handleSize / 2, y: box.top + box.height - handleSize / 2, cursor: 'se-resize' },
+                    { x: box.left + box.width / 2 - handleSize / 2, y: box.top - handleSize / 2, cursor: 'n-resize' },
+                    { x: box.left + box.width / 2 - handleSize / 2, y: box.top + box.height - handleSize / 2, cursor: 's-resize' },
+                    { x: box.left - handleSize / 2, y: box.top + box.height / 2 - handleSize / 2, cursor: 'w-resize' },
+                    { x: box.left + box.width - handleSize / 2, y: box.top + box.height / 2 - handleSize / 2, cursor: 'e-resize' }
+                ];
+
+                this.ctx.fillStyle = '#0066ff';
+                this.ctx.strokeStyle = '#ffffff';
+                this.ctx.lineWidth = 4;
+
+                handles.forEach(handle => {
+                    this.ctx.fillRect(handle.x, handle.y, handleSize, handleSize);
+                    this.ctx.strokeRect(handle.x, handle.y, handleSize, handleSize);
+                });
+            }
+
+            onMouseDown(e) {
                 if (!this.currentImage) return;
 
                 const pos = this.getMousePos(e);
+                this.lastMouseX = pos.x;
+                this.lastMouseY = pos.y;
+
+                // Check if clicking on a resize handle
+                if (this.selectedBoxIndex >= 0) {
+                    const handle = this.getResizeHandle(pos.x, pos.y);
+                    if (handle) {
+                        this.isResizing = true;
+                        this.resizeHandle = handle;
+                        this.canvas.style.cursor = handle.cursor;
+                        return;
+                    }
+                }
+
+                // Check if clicking on an existing box
+                const clickedBoxIndex = this.getBoxAtPosition(pos.x, pos.y);
+                if (clickedBoxIndex >= 0) {
+                    this.selectedBoxIndex = clickedBoxIndex;
+                    this.isDragging = true;
+                    this.dragStartX = pos.x;
+                    this.dragStartY = pos.y;
+                    this.canvas.style.cursor = 'move';
+                    this.updateSelectedBoxInfo();
+                    this.drawCanvas();
+                    return;
+                }
+
+                // Start drawing new box
+                this.selectedBoxIndex = -1;
                 this.startX = pos.x;
                 this.startY = pos.y;
                 this.isDrawing = true;
                 this.currentBox = { left: this.startX, top: this.startY, width: 0, height: 0 };
+                this.updateSelectedBoxInfo();
             }
 
-
-            draw(e) {
-                if (!this.isDrawing || !this.currentImage) return;
+            onMouseMove(e) {
+                if (!this.currentImage) return;
 
                 const pos = this.getMousePos(e);
-                this.currentBox.width = pos.x - this.startX;
-                this.currentBox.height = pos.y - this.startY;
 
+                if (this.isResizing && this.selectedBoxIndex >= 0) {
+                    this.resizeBox(pos.x, pos.y);
+                    this.drawCanvas();
+                } else if (this.isDragging && this.selectedBoxIndex >= 0) {
+                    const deltaX = pos.x - this.lastMouseX;
+                    const deltaY = pos.y - this.lastMouseY;
+                    this.moveBox(this.selectedBoxIndex, deltaX, deltaY);
+                    this.lastMouseX = pos.x;
+                    this.lastMouseY = pos.y;
+                    this.drawCanvas();
+                } else if (this.isDrawing) {
+                    this.currentBox.width = pos.x - this.startX;
+                    this.currentBox.height = pos.y - this.startY;
+                    this.drawCanvas();
+                } else {
+                    // Update cursor based on what's under mouse
+                    this.updateCursor(pos.x, pos.y);
+                }
+            }
+
+            onMouseUp() {
+                if (this.isDrawing && this.currentBox) {
+                    // Only add box if it has meaningful size
+                    if (Math.abs(this.currentBox.width) > 10 && Math.abs(this.currentBox.height) > 10) {
+                        const box = {
+                            left: Math.min(this.startX, this.startX + this.currentBox.width),
+                            top: Math.min(this.startY, this.startY + this.currentBox.height),
+                            width: Math.abs(this.currentBox.width),
+                            height: Math.abs(this.currentBox.height),
+                            type: 'rect',
+                            stroke: '#ff0000',
+                            strokeWidth: 3,
+                            fill: 'rgba(255, 0, 0, 0.3)',
+                            saved: false
+                        };
+
+                        this.boxes.push(box);
+                        this.selectedBoxIndex = this.boxes.length - 1;
+                        document.getElementById('boxCount').textContent = this.boxes.length;
+                        this.updateSelectedBoxInfo();
+                    }
+                    this.currentBox = null;
+                }
+
+                this.isDrawing = false;
+                this.isDragging = false;
+                this.isResizing = false;
+                this.resizeHandle = null;
+                this.canvas.style.cursor = 'crosshair';
                 this.drawCanvas();
             }
+
+            updateCursor(x, y) {
+                if (this.selectedBoxIndex >= 0) {
+                    const handle = this.getResizeHandle(x, y);
+                    if (handle) {
+                        this.canvas.style.cursor = handle.cursor;
+                        return;
+                    }
+                }
+
+                const boxIndex = this.getBoxAtPosition(x, y);
+                if (boxIndex >= 0) {
+                    this.canvas.style.cursor = 'pointer';
+                } else {
+                    this.canvas.style.cursor = 'crosshair';
+                }
+            }
+
+            getResizeHandle(x, y) {
+                if (this.selectedBoxIndex < 0) return null;
+
+                const box = this.boxes[this.selectedBoxIndex];
+                const handleSize = 8;
+                const tolerance = 5;
+
+                const handles = [
+                    { x: box.left, y: box.top, cursor: 'nw-resize', type: 'nw' },
+                    { x: box.left + box.width, y: box.top, cursor: 'ne-resize', type: 'ne' },
+                    { x: box.left, y: box.top + box.height, cursor: 'sw-resize', type: 'sw' },
+                    { x: box.left + box.width, y: box.top + box.height, cursor: 'se-resize', type: 'se' },
+                    { x: box.left + box.width / 2, y: box.top, cursor: 'n-resize', type: 'n' },
+                    { x: box.left + box.width / 2, y: box.top + box.height, cursor: 's-resize', type: 's' },
+                    { x: box.left, y: box.top + box.height / 2, cursor: 'w-resize', type: 'w' },
+                    { x: box.left + box.width, y: box.top + box.height / 2, cursor: 'e-resize', type: 'e' }
+                ];
+
+                for (let handle of handles) {
+                    if (Math.abs(x - handle.x) <= tolerance && Math.abs(y - handle.y) <= tolerance) {
+                        return handle;
+                    }
+                }
+                return null;
+            }
+
+            getBoxAtPosition(x, y) {
+                for (let i = this.boxes.length - 1; i >= 0; i--) {
+                    const box = this.boxes[i];
+                    if (x >= box.left && x <= box.left + box.width &&
+                        y >= box.top && y <= box.top + box.height) {
+                        return i;
+                    }
+                }
+                return -1;
+            }
+
+            resizeBox(x, y) {
+                if (this.selectedBoxIndex < 0 || !this.resizeHandle) return;
+
+                const box = this.boxes[this.selectedBoxIndex];
+                const handle = this.resizeHandle;
+
+                switch (handle.type) {
+                    case 'nw':
+                        const newWidth = box.width + (box.left - x);
+                        const newHeight = box.height + (box.top - y);
+                        if (newWidth > 10 && newHeight > 10) {
+                            box.width = newWidth;
+                            box.height = newHeight;
+                            box.left = x;
+                            box.top = y;
+                        }
+                        break;
+                    case 'ne':
+                        const neWidth = x - box.left;
+                        const neHeight = box.height + (box.top - y);
+                        if (neWidth > 10 && neHeight > 10) {
+                            box.width = neWidth;
+                            box.height = neHeight;
+                            box.top = y;
+                        }
+                        break;
+                    case 'sw':
+                        const swWidth = box.width + (box.left - x);
+                        const swHeight = y - box.top;
+                        if (swWidth > 10 && swHeight > 10) {
+                            box.width = swWidth;
+                            box.height = swHeight;
+                            box.left = x;
+                        }
+                        break;
+                    case 'se':
+                        const seWidth = x - box.left;
+                        const seHeight = y - box.top;
+                        if (seWidth > 10 && seHeight > 10) {
+                            box.width = seWidth;
+                            box.height = seHeight;
+                        }
+                        break;
+                    case 'n':
+                        const nHeight = box.height + (box.top - y);
+                        if (nHeight > 10) {
+                            box.height = nHeight;
+                            box.top = y;
+                        }
+                        break;
+                    case 's':
+                        const sHeight = y - box.top;
+                        if (sHeight > 10) {
+                            box.height = sHeight;
+                        }
+                        break;
+                    case 'w':
+                        const wWidth = box.width + (box.left - x);
+                        if (wWidth > 10) {
+                            box.width = wWidth;
+                            box.left = x;
+                        }
+                        break;
+                    case 'e':
+                        const eWidth = x - box.left;
+                        if (eWidth > 10) {
+                            box.width = eWidth;
+                        }
+                        break;
+                }
+
+                box.saved = false;
+                this.updateSelectedBoxInfo();
+            }
+
+            moveBox(boxIndex, deltaX, deltaY) {
+                if (boxIndex < 0 || boxIndex >= this.boxes.length) return;
+
+                const box = this.boxes[boxIndex];
+                box.left += deltaX;
+                box.top += deltaY;
+
+                // Keep box within canvas bounds
+                box.left = Math.max(0, Math.min(this.canvas.width - box.width, box.left));
+                box.top = Math.max(0, Math.min(this.canvas.height - box.height, box.top));
+
+                box.saved = false;
+                this.updateSelectedBoxInfo();
+            }
+
+            onKeyDown(e) {
+                if (!this.currentImage || this.selectedBoxIndex < 0) return;
+
+                const moveDistance = e.shiftKey ? 10 : 1;
+
+                switch (e.key) {
+                    case 'ArrowLeft':
+                        e.preventDefault();
+                        this.moveBox(this.selectedBoxIndex, -moveDistance, 0);
+                        this.drawCanvas();
+                        break;
+                    case 'ArrowRight':
+                        e.preventDefault();
+                        this.moveBox(this.selectedBoxIndex, moveDistance, 0);
+                        this.drawCanvas();
+                        break;
+                    case 'ArrowUp':
+                        e.preventDefault();
+                        this.moveBox(this.selectedBoxIndex, 0, -moveDistance);
+                        this.drawCanvas();
+                        break;
+                    case 'ArrowDown':
+                        e.preventDefault();
+                        this.moveBox(this.selectedBoxIndex, 0, moveDistance);
+                        this.drawCanvas();
+                        break;
+                    case 'Delete':
+                    case 'Backspace':
+                        e.preventDefault();
+                        this.deleteSelectedBox();
+                        break;
+                    case 'Escape':
+                        e.preventDefault();
+                        this.selectedBoxIndex = -1;
+                        this.updateSelectedBoxInfo();
+                        this.drawCanvas();
+                        break;
+                }
+            }
+
+            deleteSelectedBox() {
+                if (this.selectedBoxIndex >= 0) {
+                    this.boxes.splice(this.selectedBoxIndex, 1);
+                    this.selectedBoxIndex = -1;
+                    document.getElementById('boxCount').textContent = this.boxes.length;
+                    this.updateSelectedBoxInfo();
+                    this.drawCanvas();
+                    // this.showAlert('Box deleted', 'info');
+                }
+            }
+
+            updateSelectedBoxInfo() {
+                const selectedBoxInfo = document.getElementById('selectedBoxInfo');
+                if (this.selectedBoxIndex >= 0) {
+                    const box = this.boxes[this.selectedBoxIndex];
+                    selectedBoxInfo.textContent = `#${this.selectedBoxIndex + 1} (${Math.round(box.left)}, ${Math.round(box.top)}, ${Math.round(box.width)}×${Math.round(box.height)})`;
+                } else {
+                    selectedBoxInfo.textContent = 'None';
+                }
+            }
+
             getMousePos(e) {
                 const rect = this.canvas.getBoundingClientRect();
                 const scaleX = this.canvas.width / rect.width;
@@ -578,34 +1037,6 @@
                     x: (e.clientX - rect.left) * scaleX,
                     y: (e.clientY - rect.top) * scaleY
                 };
-            }
-
-
-            stopDrawing() {
-                if (!this.isDrawing || !this.currentBox) return;
-
-                this.isDrawing = false;
-
-                // Only add box if it has meaningful size
-                if (Math.abs(this.currentBox.width) > 10 && Math.abs(this.currentBox.height) > 10) {
-                    // Normalize box coordinates (handle negative width/height)
-                    const box = {
-                        left: Math.min(this.startX, this.startX + this.currentBox.width),
-                        top: Math.min(this.startY, this.startY + this.currentBox.height),
-                        width: Math.abs(this.currentBox.width),
-                        height: Math.abs(this.currentBox.height),
-                        type: 'rect',
-                        stroke: '#ff0000',
-                        strokeWidth: 3,
-                        fill: 'rgba(255, 0, 0, 0.3)'
-                    };
-
-                    this.boxes.push(box);
-                    document.getElementById('boxCount').textContent = this.boxes.length;
-                }
-
-                this.currentBox = null;
-                this.drawCanvas();
             }
 
             async saveAnnotations() {
@@ -621,7 +1052,10 @@
                             'Content-Type': 'application/json',
                         },
                         body: JSON.stringify({
-                            boxes: this.boxes,
+                            boxes: this.boxes.map(box => ({
+                                ...box,
+                                saved: true
+                            })),
                             image_name: this.currentImage,
                             original_width: this.originalWidth,
                             original_height: this.originalHeight
@@ -630,6 +1064,8 @@
 
                     if (response.ok) {
                         const result = await response.json();
+                        this.boxes.forEach(box => box.saved = true);
+                        this.drawCanvas();
                         this.showAlert(result.message, 'success');
                         this.loadImages(); // Refresh image list to update progress
                     } else {
@@ -643,7 +1079,9 @@
             undoLastBox() {
                 if (this.boxes.length > 0) {
                     this.boxes.pop();
+                    this.selectedBoxIndex = -1;
                     document.getElementById('boxCount').textContent = this.boxes.length;
+                    this.updateSelectedBoxInfo();
                     this.drawCanvas();
                     this.showAlert('Last box removed', 'info');
                 } else {
@@ -662,7 +1100,9 @@
                         });
 
                         this.boxes = [];
+                        this.selectedBoxIndex = -1;
                         document.getElementById('boxCount').textContent = '0';
+                        this.updateSelectedBoxInfo();
                         this.drawCanvas();
                         this.showAlert('All boxes cleared', 'success');
                         this.loadImages(); // Refresh progress
@@ -679,8 +1119,13 @@
                     const response = await fetch(`/api/annotations/${encodeURIComponent(this.currentImage)}`);
                     const data = await response.json();
 
-                    this.boxes = data.boxes || [];
+                    this.boxes = (data.boxes || []).map(box => ({
+                        ...box,
+                        saved: true
+                    }));
+                    this.selectedBoxIndex = -1;
                     document.getElementById('boxCount').textContent = this.boxes.length;
+                    this.updateSelectedBoxInfo();
                     this.drawCanvas();
                     this.showAlert('Annotations reloaded from file', 'success');
                 } catch (error) {
@@ -715,8 +1160,12 @@
                         await this.loadImages();
 
                         // Auto-select the uploaded image
-                        document.getElementById('imageSelect').value = file.name;
-                        this.loadImage(file.name);
+                        const index = this.images.findIndex(img => img.name === file.name);
+                        if (index >= 0) {
+                            this.currentImageIndex = index;
+                            document.getElementById('imageSelect').value = file.name;
+                            this.loadImage(file.name);
+                        }
                     } else {
                         throw new Error('Upload failed');
                     }
