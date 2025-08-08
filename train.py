@@ -3,6 +3,10 @@ import shutil
 from glob import glob
 import cv2
 from ultralytics import YOLO
+from dotenv import load_dotenv
+
+load_dotenv()
+YOLO_MODEL_NAME = os.getenv('YOLO_MODEL_NAME')
 
 def get_abs_path(relative_path):
     return os.path.abspath(relative_path)
@@ -10,8 +14,18 @@ def get_abs_path(relative_path):
 def get_image_paths(directory):
     return sorted(glob(os.path.join(directory, '*.[jp][pn]g')))
 
-def train_model(data_yaml_path, model_name='yolo11s.pt', run_name='comic_panel_yolov8n', device=0):
-    model = YOLO(model_name)
+def train_model(data_yaml_path, run_name='best', device=0):
+    checkpoint_path = f"runs/detect/{run_name}/weights/last.pt"
+
+    if os.path.isfile(checkpoint_path):
+        print(f"🔄 Resuming training from checkpoint: {checkpoint_path}")
+        model = YOLO(checkpoint_path)
+        resume_flag = True
+    else:
+        print("✨ Starting fresh training from pretrained model 'yolo11s.pt'")
+        model = YOLO("yolo11s.pt")
+        resume_flag = False
+
     model.train(
         data=data_yaml_path,
         imgsz=640,
@@ -21,7 +35,8 @@ def train_model(data_yaml_path, model_name='yolo11s.pt', run_name='comic_panel_y
         device=device,
         cache=True,
         project='runs/detect',
-        exist_ok=True
+        exist_ok=True,
+        resume=resume_flag
     )
     return model
 
@@ -36,7 +51,7 @@ def get_trained_weights(run_name):
         raise FileNotFoundError(f"❌ Trained weights not found at: {path}")
     return path
 
-def backup_weights(source_path, backup_path='./comic_yolov8n_best.pt'):
+def backup_weights(source_path, backup_path='./best.pt'):
     backup_path = os.path.abspath(backup_path)
     os.makedirs(os.path.dirname(backup_path), exist_ok=True)
     shutil.copy(source_path, backup_path)
@@ -60,26 +75,17 @@ def annotate_images(model, image_paths, output_dir='temp_dir', image_size=640):
 def main():
     # Config Paths
     data_yaml_path = get_abs_path('./comic.yaml')
-    val_dir = get_abs_path('dataset/images/val')
-    image_paths = get_image_paths(val_dir)
 
     # Train
-    run_name = 'comic_panel_yolov8n'
+    run_name=YOLO_MODEL_NAME
     model = train_model(data_yaml_path, run_name=run_name)
 
     # Validate
     validate_model(model)
 
-    # Save best.pt
+    # Save
     weights_path = get_trained_weights(run_name)
-    backup_path = backup_weights(weights_path)
-
-    # Reload model for inference
-    model = YOLO(backup_path)
-
-    # Annotate
-    annotate_images(model, image_paths)
-
+    backup_weights(weights_path, f'{YOLO_MODEL_NAME}.pt')
 
 if __name__ == "__main__":
     main()

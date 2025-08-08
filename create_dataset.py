@@ -5,12 +5,14 @@ from pathlib import Path
 from dotenv import load_dotenv
 
 load_dotenv()
-SOURCE_PATH = os.getenv('SOURCE_PATH')
+SOURCE_PATHS = os.getenv('SOURCE_PATH')
 
-if not SOURCE_PATH:
+if not SOURCE_PATHS:
     raise ValueError("SOURCE_PATH not set")
 
-source_path = Path(SOURCE_PATH)
+# Split by comma and strip whitespace
+source_paths = [Path(p.strip()) for p in SOURCE_PATHS.split(',')]
+
 images_dir = Path('images')
 dataset_dir = Path('dataset')
 
@@ -22,19 +24,23 @@ if images_dir.exists():
     shutil.rmtree(images_dir)
 images_dir.mkdir(parents=True)
 
-# Copy all images from SOURCE_PATH flat into images_dir with prefix folder structure joined by _
-for root, dirs, files in os.walk(source_path):
-    root_path = Path(root)
-    if root_path == source_path:
-        prefix = 'root'
-    else:
-        rel_path = root_path.relative_to(source_path)
-        prefix = '_'.join(rel_path.parts)
-    for file in files:
-        if Path(file).suffix.lower() in image_exts:
-            src_file = root_path / file
-            dst_file = images_dir / f"{prefix}_{file}"
-            shutil.copy2(src_file, dst_file)
+# Copy images from all source paths
+for source_path in source_paths:
+    if not source_path.exists():
+        print(f"Warning: source path {source_path} does not exist, skipping.")
+        continue
+    for root, dirs, files in os.walk(source_path):
+        root_path = Path(root)
+        if root_path == source_path:
+            prefix = 'root'
+        else:
+            rel_path = root_path.relative_to(source_path)
+            prefix = '_'.join(rel_path.parts)
+        for file in files:
+            if Path(file).suffix.lower() in image_exts:
+                src_file = root_path / file
+                dst_file = images_dir / f"{prefix}_{file}"
+                shutil.copy2(src_file, dst_file)
 
 # Delete old dataset if exists
 if dataset_dir.exists():

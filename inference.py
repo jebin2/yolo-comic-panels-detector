@@ -2,6 +2,10 @@ import os
 import cv2
 from glob import glob
 from ultralytics import YOLO
+from dotenv import load_dotenv
+
+load_dotenv()
+YOLO_MODEL_NAME = os.getenv('YOLO_MODEL_NAME')
 
 def get_abs_path(relative_path):
     return os.path.abspath(relative_path)
@@ -50,7 +54,7 @@ def run_inference(weights_path, images_dirs, output_dir='temp_dir'):
 
 if __name__ == "__main__":
     run_inference(
-        weights_path='./comic_yolov8n_best.pt',
+        weights_path=f'{YOLO_MODEL_NAME}.pt',
         images_dirs=['./dataset/images/train', './dataset/images/val', './dataset/images/test'],
         output_dir='./temp_dir'
     )
