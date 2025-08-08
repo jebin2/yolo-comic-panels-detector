@@ -1,5 +1,5 @@
-path: /home/jebineinstein/git/comic_annotator/dataset
-train: images/train
-val: images/val
+path: /home/jebineinstein/git/yolo-comic-panels-detector/dataset
+train: /home/jebineinstein/git/yolo-comic-panels-detector/dataset/images/train
+val: /home/jebineinstein/git/yolo-comic-panels-detector/dataset/images/val
 nc: 1
 names: ['panel']
